@@ -1,0 +1,162 @@
+syntax = "proto3";
+
+package identity;
+
+option go_package = "github.com/MrEsbens/messenger-identity/api/identity/v1;identityv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// =============================================================================
+// === MESSAGES (должны быть ДО service!) ======================================
+// =============================================================================
+
+// ─── Auth ───────────────────────────────────────────────────────────────────
+message RegisterRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message AuthResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  UserDTO user = 3;
+}
+
+message RefreshRequest {
+  string refresh_token = 1;
+}
+
+message RefreshResponse {
+  string access_token = 1;
+}
+
+// ─── User ───────────────────────────────────────────────────────────────────
+message UserDTO {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  string avatar_url = 4;
+  string status = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message GetMeRequest {
+  string user_id = 1;
+}
+
+message UserResponse {
+  UserDTO user = 1;
+}
+
+message UpdateProfileRequest {
+  string user_id = 1;
+  optional string username = 2;
+  optional string status = 3;
+}
+
+message SearchUsersRequest {
+  string query = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message SearchUsersResponse {
+  repeated UserDTO users = 1;
+}
+
+// ─── Contacts ───────────────────────────────────────────────────────────────
+message SendContactRequest {
+    string user_id = 1;
+    string contact_id = 2;
+}
+
+message ContactRequestResponse {
+    string request_id = 1;
+    string status = 2;
+}
+
+message AcceptContactRequest {
+    string user_id = 1;
+    string request_from_id = 2;
+}
+
+message RejectContactRequest {
+    string user_id = 1;
+    string request_from_id = 2;
+}
+
+message ListPendingRequestsRequest {
+    string user_id = 1;
+}
+
+message ListPendingRequestsResponse {
+    repeated UserDTO requests = 1;
+}
+
+message DeleteContactRequest {
+  string user_id = 1;
+  string contact_id = 2;
+}
+
+message ListContactsRequest {
+  string user_id = 1;
+}
+
+message ListContactsResponse {
+  repeated UserDTO contacts = 1;
+}
+
+// ─── Files ──────────────────────────────────────────────────────────────────
+message GetUploadAvatarURLRequest {
+  string owner_id = 1;
+  string file_name = 2;
+  string mime_type = 3;
+  int64 file_size = 4;
+}
+
+message GetUploadURLResponse {
+  string file_id = 1;
+  string upload_url = 2;
+  string object_key = 3;
+  google.protobuf.Timestamp expires_at = 4;
+}
+
+message ConfirmUploadRequest {
+  string file_id = 1;
+}
+
+// =============================================================================
+// === SERVICE (теперь все типы уже определены) ================================
+// =============================================================================
+
+service IdentityService {
+  // Auth
+  rpc Register (RegisterRequest) returns (AuthResponse);
+  rpc Login (LoginRequest) returns (AuthResponse);
+  rpc Refresh (RefreshRequest) returns (RefreshResponse);
+  
+  // Users
+  rpc GetMe (GetMeRequest) returns (UserResponse);
+  rpc UpdateProfile (UpdateProfileRequest) returns (UserResponse);
+  
+  // Files (Avatar)
+  rpc GetUploadAvatarURL (GetUploadAvatarURLRequest) returns (GetUploadURLResponse);
+  rpc ConfirmAvatarUpload (ConfirmUploadRequest) returns (google.protobuf.Empty);
+  
+  rpc SearchUsers (SearchUsersRequest) returns (SearchUsersResponse);
+  
+  // Contacts ← ИСПРАВЛЕНО: методы переименованы
+  rpc SendContact (SendContactRequest) returns (ContactRequestResponse);
+  rpc AcceptContact (AcceptContactRequest) returns (google.protobuf.Empty);
+  rpc RejectContact (RejectContactRequest) returns (google.protobuf.Empty);
+  rpc ListPendingRequests (ListPendingRequestsRequest) returns (ListPendingRequestsResponse);
+  rpc DeleteContact (DeleteContactRequest) returns (google.protobuf.Empty);
+  rpc ListContacts (ListContactsRequest) returns (ListContactsResponse);
+}

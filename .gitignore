@@ -1,0 +1,18 @@
+# Local configuration; commit only the sanitized example files.
+**/.env
+**/.env.docker
+**/.env.local
+**/.env.*.local
+
+# Python
+**/.venv/
+**/venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Go and editor/OS files
+/bin/
+*.test
+*.out
+.DS_Store

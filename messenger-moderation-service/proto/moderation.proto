@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package moderation;
+
+// Опция для генерации Go-кода (если потом понадобится)
+option go_package = "github.com/MrEsbens/messenger-moderation-service/api/moderation/v1;moderationv1";
+
+import "google/protobuf/empty.proto";
+
+// ─── Запрос на проверку текста ──────────────────────────────────────────────
+message ModerateTextRequest {
+  // Текст для проверки (обязательное поле)
+  string text = 1;  
+  // ID пользователя (для логирования нарушений)
+  string user_id = 2;
+  // ID сервера (для применения настроек модерации)
+  string server_id = 3;
+  // Настройки фильтров (какие проверки запускать)
+  ModerateFilters filters = 4;
+}
+
+// Настройки фильтров
+message ModerateFilters {
+  string profanity_action = 1;
+  string toxicity_action = 2;
+  string nsfw_text_action = 3;
+  string hate_speech_action = 4;
+  float ml_score_threshold = 5;
+}
+
+// ─── Ответ с результатом модерации ──────────────────────────────────────────
+message ModerateTextResponse {
+  bool allowed = 1;
+  repeated Violation violations = 2;
+  float processing_time_ms = 3;
+}
+
+// Нарушение контента
+message Violation {
+  // Тип нарушения: profanity | toxicity | nsfw_text | hate_speech
+  string type = 1;
+  // Человекочитаемое описание (для логирования)
+  string message = 2;  
+  // Score от ML-модели (0.0-1.0, где 1.0 = 100% уверенности)
+  float score = 3;
+}
+
+// ─── Health Check (проверка работоспособности сервиса) ──────────────────────
+message HealthRequest {
+}
+
+message HealthResponse {
+  // Общий статус: "ok" | "degraded" | "unavailable"
+  string status = 1;
+  
+  // Детальные проверки (ключ-значение)
+  // Пример: {"model_loaded": "true", "gpu_available": "false"}
+  map<string, string> checks = 2;
+}
+
+service ModerationService {
+  rpc ModerateText(ModerateTextRequest) returns (ModerateTextResponse);
+  rpc Health(HealthRequest) returns (HealthResponse);
+}

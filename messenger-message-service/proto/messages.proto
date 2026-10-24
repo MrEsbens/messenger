@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package messages;
+
+option go_package = "github.com/MrEsbens/messenger-messages-service/api/messages/v1;messagesv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service MessageService {
+  // Основные методы
+  rpc SendMessage (SendMessageRequest) returns (SendMessageResponse);
+  rpc EditMessage (EditMessageRequest) returns (google.protobuf.Empty);
+  rpc DeleteMessage (DeleteMessageRequest) returns (google.protobuf.Empty);
+  rpc GetMessages (GetMessagesRequest) returns (GetMessagesResponse);
+  
+  // Статусы
+  rpc UpdateMessageStatus (UpdateMessageStatusRequest) returns (google.protobuf.Empty);
+  rpc GetMessageStatuses (GetMessageStatusesRequest) returns (GetMessageStatusesResponse);  
+  rpc GetMessageWithAttachments (GetMessageWithAttachmentsRequest) returns (MessageDTO);
+}
+
+message SendMessageRequest {
+  string sender_id = 1;
+  string chat_id = 2;
+  
+  string content = 3;
+  string content_type = 4;  // "text", "markdown", "code"
+  
+  string reply_to_id = 5;   // ID сообщения, на которое это ответ
+  string file_id = 6;       // ID файла из file-service (если есть вложение)
+  
+  string server_id = 7;  // ← Пустая строка = чат не в сервере
+}
+
+message EditMessageRequest {
+  string message_id = 1;
+  string editor_id = 2;
+  string new_content = 3;
+}
+
+message DeleteMessageRequest {
+  string message_id = 1;
+  string deleter_id = 2;
+}
+
+message GetMessagesRequest {
+  string chat_id = 1;
+  
+  int32 limit = 2;
+  int32 offset = 3;
+  
+  google.protobuf.Timestamp after = 4;
+}
+
+message UpdateMessageStatusRequest {
+  string message_id = 1;
+  string user_id = 2;
+  string status = 3;  // "sent", "delivered", "read"
+}
+
+message GetMessageStatusesRequest {
+  string message_id = 1;
+}
+
+message GetMessageWithAttachmentsRequest {
+  string message_id = 1;
+}
+
+message SendMessageResponse {
+  string message_id = 1;
+  google.protobuf.Timestamp created_at = 2;
+}
+
+message AttachmentPreview {
+  string file_id = 1;
+  string public_url = 2;    // Presigned URL для скачивания
+  string mime_type = 3;
+  int64 file_size = 4;
+  string file_name = 5;
+}
+
+message MessageDTO {
+  string id = 1;
+  string sender_id = 2;
+  string chat_id = 3;
+  
+  string content = 4;
+  string content_type = 5;
+  
+  bool has_attachment = 6;
+  
+  repeated AttachmentPreview attachments = 7;
+  
+  // Ответ на другое сообщение
+  string reply_to_id = 8;
+  
+  string server_id = 9;  // ← Пустая строка = чат не в сервере
+  
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  bool is_deleted = 12;
+}
+
+message GetMessagesResponse {
+  repeated MessageDTO messages = 1;
+  bool has_more = 2;  // Для пагинации: есть ли ещё сообщения
+}
+
+message MessageStatusDTO {
+  string user_id = 1;
+  string status = 2;  // "sent", "delivered", "read"
+  google.protobuf.Timestamp updated_at = 3;
+}
+
+message GetMessageStatusesResponse {
+  repeated MessageStatusDTO statuses = 1;
+}

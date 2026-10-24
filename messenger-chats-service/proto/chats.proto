@@ -1,0 +1,261 @@
+syntax = "proto3";
+package chats;
+
+option go_package = "github.com/MrEsbens/messenger-chats-service/api/chats/v1;chatsv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// ───────────────────────────────────────────────────────────
+// Сервис чатов
+// ───────────────────────────────────────────────────────────
+service ChatService {
+  // CRUD чатов
+  rpc CreateChat (CreateChatRequest) returns (CreateChatResponse);
+  rpc GetChat (GetChatRequest) returns (ChatDTO);
+  rpc UpdateChat (UpdateChatRequest) returns (google.protobuf.Empty);
+  rpc DeleteChat (DeleteChatRequest) returns (google.protobuf.Empty);
+  rpc ListUserChats (ListUserChatsRequest) returns (ListUserChatsResponse);
+  
+  // Участники
+  rpc AddMember (AddMemberRequest) returns (google.protobuf.Empty);
+  rpc RemoveMember (RemoveMemberRequest) returns (google.protobuf.Empty);
+  rpc UpdateMemberRole (UpdateMemberRoleRequest) returns (google.protobuf.Empty);
+  rpc ListChatMembers (ListChatMembersRequest) returns (ListChatMembersResponse);
+  
+  // Приглашения
+  rpc CreateInvite (CreateInviteRequest) returns (CreateInviteResponse);
+  rpc JoinByInvite (JoinByInviteRequest) returns (google.protobuf.Empty);
+  
+  // Проверки прав (для других сервисов)
+  rpc IsMember (IsMemberRequest) returns (IsMemberResponse);
+}
+
+// ───────────────────────────────────────────────────────────
+// Enums
+// ───────────────────────────────────────────────────────────
+enum ChatType {
+  CHAT_TYPE_UNSPECIFIED = 0;
+  CHAT_TYPE_PRIVATE = 1; // 1:1 чат
+  CHAT_TYPE_GROUP = 2; // Групповой чат (до ~100 участников)
+  CHAT_TYPE_SERVER = 3; // Канал сервера (тысячи участников)
+}
+
+enum MembershipRole {
+  ROLE_UNSPECIFIED = 0;
+  ROLE_OWNER = 1;
+  ROLE_ADMIN = 2;
+  ROLE_MEMBER = 3;
+  ROLE_MUTED = 4;
+  ROLE_BANNED = 5;
+}
+
+// ───────────────────────────────────────────────────────────
+// DTO: Chat
+// ───────────────────────────────────────────────────────────
+message ChatDTO {
+  string id = 1;
+  ChatType type = 2;
+  
+  // Метаданные
+  string name = 3;
+  string description = 4;
+
+  // Аватар
+  optional string avatar_file_id = 5;
+  optional string avatar_url = 6;
+  optional bool has_avatar = 7;
+  
+  // Владельцы
+  string created_by = 8;
+  
+  // Статистика (опционально, для списков)
+  int32 member_count = 9;
+  string last_message_preview = 10; // Кэшируется из Messages Svc
+  
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+  bool is_deleted = 13;
+  optional string config_id = 14;
+}
+
+message ChatMemberDTO {
+  string user_id = 1;
+  string chat_id = 2;
+  MembershipRole role = 3;
+  
+  google.protobuf.Timestamp joined_at = 4;
+  google.protobuf.Timestamp left_at = 5; // NULL = активен
+  
+  // Персональные настройки
+  string notification_mode = 6;
+  google.protobuf.Timestamp is_muted_until = 7;
+  
+  // Активность
+  string last_read_message_id = 8;
+  google.protobuf.Timestamp last_activity_at = 9;
+}
+
+// ───────────────────────────────────────────────────────────
+// Запросы/ответы: Чаты
+// ───────────────────────────────────────────────────────────
+message CreateChatRequest {
+  ChatType type = 1;
+  string name = 2; // Опционально для private
+  string description = 3;
+  string avatar_file_id = 4;
+  string config_id = 5; // Опционально
+  
+  // Участники при создании (для group/server)
+  repeated string initial_member_ids = 6;
+  
+  string created_by = 7; // Identity: кто создаёт
+}
+
+message CreateChatResponse {
+  string chat_id = 1;
+  google.protobuf.Timestamp created_at = 2;
+}
+
+message GetChatRequest {
+  string chat_id = 1;
+  string requester_id = 2; // Для проверки прав
+}
+
+message UpdateChatRequest {
+  string chat_id = 1;
+  string updater_id = 2; // Для проверки прав
+  
+  // Поля для обновления (опциональные, только заданные)
+  optional string name = 3;
+  optional string description = 4;
+  optional string avatar_file_id = 5;
+  optional string config_id = 6;
+}
+
+message DeleteChatRequest {
+  string chat_id = 1;
+  string deleter_id = 2; // Для проверки прав
+}
+
+message ListUserChatsRequest {
+  string user_id = 1;
+  optional ChatType type_filter = 2;  // Фильтр по типу
+  int32 limit = 3;
+  int32 offset = 4;
+  optional string after_id = 5;       // Курсорная пагинация
+}
+
+message ListUserChatsResponse {
+  repeated ChatDTO chats = 1;
+  bool has_more = 2;
+  string next_cursor = 3;
+}
+
+// ───────────────────────────────────────────────────────────
+// Запросы/ответы: Участники
+// ───────────────────────────────────────────────────────────
+message AddMemberRequest {
+  string chat_id = 1;
+  string user_id = 2; // Кого добавляем
+  string added_by = 3; // Кто добавляет (проверка прав)
+  MembershipRole role = 4; // По умолчанию: MEMBER
+}
+
+message RemoveMemberRequest {
+  string chat_id = 1;
+  string user_id = 2; // Кого удаляем
+  string removed_by = 3; // Кто удаляет (проверка прав)
+}
+
+message UpdateMemberRoleRequest {
+  string chat_id = 1;
+  string target_user_id = 2; // Чью роль меняем
+  string updated_by = 3; // Кто меняет (проверка прав)
+  MembershipRole new_role = 4;
+}
+
+message ListChatMembersRequest {
+  string chat_id = 1;
+  string requester_id = 2; // Для проверки прав
+  optional MembershipRole role_filter = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message ListChatMembersResponse {
+  repeated ChatMemberDTO members = 1;
+  bool has_more = 2;
+}
+
+// ───────────────────────────────────────────────────────────
+// Запросы/ответы: Приглашения
+// ───────────────────────────────────────────────────────────
+message CreateInviteRequest {
+  string chat_id = 1;
+  string created_by = 2; // Для проверки прав
+  optional google.protobuf.Timestamp expires_at = 3;
+  optional int32 max_uses = 4;
+}
+
+message CreateInviteResponse {
+  string invite_token = 1;            // Для формирования ссылки: /join/{token}
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+message JoinByInviteRequest {
+  string invite_token = 1;
+  string user_id = 2; // Кто вступает
+}
+
+// ───────────────────────────────────────────────────────────
+// Запросы/ответы: Проверки прав (для других сервисов)
+// ───────────────────────────────────────────────────────────
+message IsMemberRequest {
+  string chat_id = 1;
+  string user_id = 2;
+}
+
+message IsMemberResponse {
+  bool is_member = 1;
+  MembershipRole role = 2; // Возвращаем роль для детальных проверок
+}
+
+// ───────────────────────────────────────────────────────────
+// Запросы/ответы: Chat Configs
+// ───────────────────────────────────────────────────────────
+
+message ChatConfigDTO {
+  string id = 1;
+  bool allow_member_invite = 2;
+  bool allow_member_kick = 3;
+  bool allow_member_mute = 4;
+  bool auto_moderation_enabled = 5;
+  int32 max_message_length = 6;
+  string default_notification_mode = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message CreateChatConfigRequest {
+  bool allow_member_invite = 1;
+  bool allow_member_kick = 2;
+  bool allow_member_mute = 3;
+  bool auto_moderation_enabled = 4;
+  int32 max_message_length = 5;
+  string default_notification_mode = 6;
+}
+
+message GetChatConfigRequest {
+  string config_id = 1;
+}
+
+message UpdateChatConfigRequest {
+  string config_id = 1;
+  optional bool allow_member_invite = 2;
+  optional bool allow_member_kick = 3;
+  optional bool allow_member_mute = 4;
+  optional bool auto_moderation_enabled = 5;
+  optional int32 max_message_length = 6;
+  optional string default_notification_mode = 7;
+}

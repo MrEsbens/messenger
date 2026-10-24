@@ -1,0 +1,300 @@
+syntax = "proto3";
+
+package servers;
+
+option go_package = "github.com/MrEsbens/messenger-servers-service/api/servers/v1;serversv1";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+// =============================================================================
+// === MESSAGES ================================================================
+// =============================================================================
+
+// ─── Server ──────────────────────────────────────────────────────────────────
+
+message ServerDTO {
+  string id = 1;
+  string name = 2;
+  optional string description = 3;
+  string owner_id = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  bool is_deleted = 7;
+}
+
+message CreateServerRequest {
+  string name = 1;
+  optional string description = 2;
+  string owner_id = 3;
+}
+
+message CreateServerResponse {
+  string server_id = 1;
+  google.protobuf.Timestamp created_at = 2;
+}
+
+message GetServerRequest {
+  string server_id = 1;
+  string requester_id = 2;
+}
+
+message UpdateServerRequest {
+  string server_id = 1;
+  string updater_id = 2;
+  optional string name = 3;
+  optional string description = 4;
+}
+
+message DeleteServerRequest {
+  string server_id = 1;
+  string deleter_id = 2;
+}
+
+message ListUserServersRequest {
+  string user_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListUserServersResponse {
+  repeated ServerDTO servers = 1;
+}
+
+// ─── Server Config ───────────────────────────────────────────────────────────
+
+message ServerConfigDTO {
+  string server_id = 1;
+  int32 max_members = 2;
+  int32 max_channels = 3;
+  string default_notification_mode = 4;
+  bool moderation_enabled = 5;
+}
+
+message GetServerConfigRequest {
+  string server_id = 1;
+}
+
+message UpdateServerConfigRequest {
+  string server_id = 1;
+  string updater_id = 2;
+  optional int32 max_members = 3;
+  optional int32 max_channels = 4;
+  optional string default_notification_mode = 5;
+  optional bool moderation_enabled = 6;
+}
+
+// ─── Moderation Config ───────────────────────────────────────────────────────
+
+message ModerationConfigDTO {
+  string server_id = 1;
+  string profanity_filter_action = 2;
+  string toxicity_filter_action = 3;
+  string nsfw_text_filter_action = 4;
+  string hate_speech_filter_action = 5;
+}
+
+message GetModerationConfigRequest {
+  string server_id = 1;
+}
+
+message UpdateModerationConfigRequest {
+  string server_id = 1;
+  string updater_id = 2;
+  optional string profanity_filter_action = 3;
+  optional string toxicity_filter_action = 4;
+  optional string nsfw_text_filter_action = 5;
+  optional string hate_speech_filter_action = 6;
+}
+
+// ─── Members ─────────────────────────────────────────────────────────────────
+
+message MemberDTO {
+  string user_id = 1;
+  string server_id = 2;
+  repeated string role_ids = 3;
+  google.protobuf.Timestamp joined_at = 4;
+  bool is_muted = 5;
+  bool is_banned = 6;
+  optional google.protobuf.Timestamp muted_until = 7;
+}
+
+message AddMemberRequest {
+  string server_id = 1;
+  string user_id = 2;
+  string added_by = 3;
+}
+
+message RemoveMemberRequest {
+  string server_id = 1;
+  string user_id = 2;
+  string removed_by = 3;
+}
+
+message GetMemberRequest {
+  string server_id = 1;
+  string user_id = 2;
+}
+
+message ListMembersRequest {
+  string server_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListMembersResponse {
+  repeated MemberDTO members = 1;
+}
+
+message BanMemberRequest {
+  string server_id = 1;
+  string user_id = 2;
+  string banned_by = 3;
+}
+
+message UnbanMemberRequest {
+  string server_id = 1;
+  string user_id = 2;
+  string unbanned_by = 3;
+}
+
+message MuteMemberRequest {
+  string server_id = 1;
+  string user_id = 2;
+  string muted_by = 3;
+  int64 duration_hours = 4; // 0 = навсегда
+}
+
+message UnmuteMemberRequest {
+  string server_id = 1;
+  string user_id = 2;
+  string unmuted_by = 3;
+}
+
+// ─── Roles ───────────────────────────────────────────────────────────────────
+
+message RoleDTO {
+  string id = 1;
+  string server_id = 2;
+  string name = 3;
+  string color = 4;
+  repeated string permissions = 5;
+  int32 position = 6;
+  bool is_default = 7;
+}
+
+message CreateRoleRequest {
+  string server_id = 1;
+  string name = 2;
+  string creator_id = 3;
+}
+
+message UpdateRoleRequest {
+  string server_id = 1;
+  string role_id = 2;
+  string updater_id = 3;
+  optional string name = 4;
+  optional string color = 5;
+  repeated string permissions = 6;
+}
+
+message DeleteRoleRequest {
+  string server_id = 1;
+  string role_id = 2;
+  string deleter_id = 3;
+}
+
+message AssignRoleRequest {
+  string server_id = 1;
+  string member_id = 2; // ← ДОБАВЛЕНО
+  string role_id = 3;
+  string assigned_by = 4;
+}
+
+message RemoveRoleRequest {
+  string server_id = 1;
+  string member_id = 2; // ← ДОБАВЛЕНО
+  string role_id = 3;
+  string removed_by = 4;
+}
+
+message GetMemberRolesRequest {
+  string member_id = 1;
+}
+
+message GetMemberRolesResponse {
+  repeated RoleDTO roles = 1;
+}
+
+// ─── Server Chats ────────────────────────────────────────────────────────────
+
+message ServerChatDTO {
+  string chat_id = 1;
+  string server_id = 2;
+  string name = 3;
+  int32 position = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message CreateServerChatRequest {
+  string server_id = 1;
+  string name = 2;
+  string created_by = 3;
+}
+
+message ListServerChatsRequest {
+  string server_id = 1;
+  string requester_id = 2;
+}
+
+message ListServerChatsResponse {
+  repeated ServerChatDTO chats = 1;
+}
+
+message DeleteServerChatRequest {
+  string server_id = 1;
+  string chat_id = 2;
+  string deleter_id = 3;
+}
+
+// =============================================================================
+// === SERVICE =================================================================
+// =============================================================================
+
+service ServersService {
+  // ─── Server CRUD ───────────────────────────────────────────────────────────
+  rpc CreateServer(CreateServerRequest) returns (CreateServerResponse);
+  rpc GetServer(GetServerRequest) returns (ServerDTO);
+  rpc UpdateServer(UpdateServerRequest) returns (google.protobuf.Empty);
+  rpc DeleteServer(DeleteServerRequest) returns (google.protobuf.Empty);
+  rpc ListUserServers(ListUserServersRequest) returns (ListUserServersResponse);
+  
+  // ─── Configs ───────────────────────────────────────────────────────────────
+  rpc GetServerConfig(GetServerConfigRequest) returns (ServerConfigDTO);
+  rpc UpdateServerConfig(UpdateServerConfigRequest) returns (google.protobuf.Empty);
+  rpc GetModerationConfig(GetModerationConfigRequest) returns (ModerationConfigDTO);
+  rpc UpdateModerationConfig(UpdateModerationConfigRequest) returns (google.protobuf.Empty);
+  
+  // ─── Members ───────────────────────────────────────────────────────────────
+  rpc AddMember(AddMemberRequest) returns (google.protobuf.Empty);
+  rpc RemoveMember(RemoveMemberRequest) returns (google.protobuf.Empty);
+  rpc GetMember(GetMemberRequest) returns (MemberDTO);
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
+  rpc BanMember(BanMemberRequest) returns (google.protobuf.Empty);
+  rpc UnbanMember(UnbanMemberRequest) returns (google.protobuf.Empty);
+  rpc MuteMember(MuteMemberRequest) returns (google.protobuf.Empty);
+  rpc UnmuteMember(UnmuteMemberRequest) returns (google.protobuf.Empty);
+  
+  // ─── Roles ─────────────────────────────────────────────────────────────────
+  rpc CreateRole(CreateRoleRequest) returns (RoleDTO);
+  rpc UpdateRole(UpdateRoleRequest) returns (google.protobuf.Empty);
+  rpc DeleteRole(DeleteRoleRequest) returns (google.protobuf.Empty);
+  rpc AssignRole(AssignRoleRequest) returns (google.protobuf.Empty);
+  rpc RemoveRole(RemoveRoleRequest) returns (google.protobuf.Empty);
+  rpc GetMemberRoles(GetMemberRolesRequest) returns (GetMemberRolesResponse);
+  
+  // ─── Server Chats ──────────────────────────────────────────────────────────
+  rpc CreateServerChat(CreateServerChatRequest) returns (ServerChatDTO);
+  rpc ListServerChats(ListServerChatsRequest) returns (ListServerChatsResponse);
+  rpc DeleteServerChat(DeleteServerChatRequest) returns (google.protobuf.Empty);
+}

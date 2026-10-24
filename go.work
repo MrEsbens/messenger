@@ -1,0 +1,10 @@
+go 1.25.5
+
+use (
+	./messenger-chats-service
+	./messenger-file-service
+	./messenger-gw
+	./messenger-identity
+	./messenger-message-service
+	./messenger-servers-service
+)
